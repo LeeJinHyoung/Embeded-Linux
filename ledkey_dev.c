@@ -66,27 +66,29 @@ static void ledkey_free(void)
 		gpio_free(key[i]);
 	}
 }
-void led_write(unsigned char data)
+void led_write(char* data)
 {
 	int i;
 	for(i = 0 ; i< ARRAY_SIZE(led); i++){
-		gpio_direction_output(led[i], (data>>i)&0x01);
+//		gpio_direction_output(led[i], (data>>i)&0x01);
+//		gpio_set_value(led[i], (data >>i)&0x01);
+		gpio_direction_output(led[i], 0);
+		gpio_set_value(led[i], data[i]);
 		//get
 	}
 }
-void key_read(unsigned char* key_data)
+void key_read(char* keydata)
 {
 	int i;
-	unsigned long data=0;
-	unsigned long temp;
+//	unsigned long data=0;
+//	unsigned long temp;
 	for(i = 0; i<8; i++)
 	{
 		gpio_direction_input(key[i]);//16..17..18..19..를 입력으로 하겠다
-		temp = gpio_get_value(key[i])<<i;//한 비트의 값.. 16번 비트의 값을 읽어오겠다
+		keydata[i] = gpio_get_value(key[i]);//한 비트의 값.. 16번 비트의 값을 읽어오겠다
 	//	data |= temp;
-		data = data | temp;
 	}
-	*key_data=data;
+//	*key_data=data;
 //	key_write(data); //because not implement switch yet
 	return;
 }
@@ -106,23 +108,23 @@ static loff_t leddev_llseek(struct file *filp, loff_t off, int whence)
 }
 static ssize_t leddev_read(struct file *filp, char* buf, size_t count, loff_t* f_pos)
 {
-	char kbuf;
+	char kbuf[8];
 	int ret;
 	printk("leddev read -> buf : %08X, count : %08X\n",(unsigned int)buf, count);
 //	led_read(&kbuf);
-	key_read(&kbuf);
+	key_read(kbuf);
 //	put_user(kbuf, buf);
-	if((ret = copy_to_user(buf, &kbuf,count))<0)
+	if((ret = copy_to_user(buf, kbuf,count))<0)
 		return -ENOMEM;
 	return count;
 }
 static ssize_t leddev_write(struct file *filp, const char* buf, size_t count, loff_t* f_pos)
 {
-	char kbuf;
+	char kbuf[4];
 	int ret;
 	printk("leddev write -> buf : %d\n, count : %08X\n",(unsigned int)buf, count);
 //	get_user(kbuf, buf);
-	if((ret = copy_from_user(&kbuf,buf,count))<0)
+	if((ret = copy_from_user(kbuf,buf,count))<0)
 		return -ENOMEM;
 	led_write(kbuf);
 	return count;

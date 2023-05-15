@@ -5,28 +5,27 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
+#include <string.h>
 
 #define DEVICE_FILENAME	"/dev/leddev"	//mknod로 생성한 파일 이름
-void print_led(unsigned char);
-void print_key(unsigned char);
+void print_led(char*);
+void print_key(char*);
 int main(int argc, char* argv[])
 {
+	int i;
 	int dev;
 	char buff = 0;
 //	int ret;
 	char ledbuff[4] = {0};
-	char keybuff[4] = {0};
-	char oldbuff = 0;
-
+	char keybuff[8] = {0};
+	char oldkeybuff[8] = {0};
 	int ret;
-	int i;
 
 	if(argc < 2)
 	{
 		printf("USAGE : %s [ledval] \n", argv[0]);
 		return 1;
 	}
-
 	buff = atoi(argv[1]);
 	for(i = 0; i < 4; i++)
 	{
@@ -43,41 +42,41 @@ int main(int argc, char* argv[])
 		perror("open()");
 		return 2;
 	}
-	ret = write(dev,&ledbuff,sizeof(buff));
+	ret = write(dev,ledbuff,sizeof(ledbuff));
 	if(ret<0)
 	{
 		perror("write()");
 		return 3;
 	}
-	print_led(buff);
+	print_led(ledbuff);
 	buff = 0;
 
 	do{
-		read(dev,&buff,sizeof(buff));
-		if((buff !=0)&&(buff != oldbuff))
+		read(dev,keybuff,sizeof(keybuff));
+		for(i = 0 ; i <8; i ++)
 		{
-			printf("key : %d\b", buff);
-			print_led(buff);
-			write(dev,&buff,sizeof(buff));
-			print_key(buff);
-			oldbuff = buff;
-			if(buff == 128)
+			if((keybuff[i] !=0)&&(keybuff[i] != oldkeybuff[i]))
 			{
-				printf("STOP LED");
-				break;
+				print_key(keybuff);
+				memcpy(ledbuff, keybuff, sizeof(ledbuff));
+				write(dev, ledbuff, sizeof(ledbuff));
+				print_led(ledbuff);
+				memcpy(oldkeybuff, keybuff, sizeof(keybuff));
 			}
 		}
+		if(keybuff[7])
+			break;
 	}while(1);	
 	close(dev);
 	return 0;
 }
-void print_led(unsigned char led)
+void print_led(char* ledbuff)
 {
 	int i;
 	puts("1:2:3:4");
 	for(i = 0; i<=3;i++)
 	{
-		if(led&(0x01<<i))
+		if(ledbuff[i] == 1)
 			putchar('o');
 		else
 			putchar('x');
@@ -88,13 +87,13 @@ void print_led(unsigned char led)
 	}
 	return;
 }
-void print_key(unsigned char key)
+void print_key(char* keybuff)
 {
 	int i;
 	puts("1:2:3:4:5:6:7:8");
 	for(i = 0; i<=7;i++)
 	{
-		if(key&(0x01<<i))
+		if(keybuff[i] == 1)
 			putchar('o');
 		else
 			putchar('x');
